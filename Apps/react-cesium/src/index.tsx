@@ -5,7 +5,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
+// @ts-ignore
 import "cesium/Source/Widgets/widgets.css";
+// @ts-ignore
 import "./index.css";
 
 const rootElement = document.getElementById('root');

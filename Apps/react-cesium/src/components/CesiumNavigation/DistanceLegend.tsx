@@ -14,6 +14,8 @@ export default function DistanceLegend({ viewer }: DistanceLegendProps) {
   const [distanceLabel, setDistanceLabel] = useState<string | undefined>(undefined);
   const [barWidth, setBarWidth] = useState<number | undefined>(undefined);
 
+  // [KRİTİK] Her render döngüsünde (postRender) ekranın sol alt ve sağ alt köşelerinin
+  // yeryüzündeki (globe) izdüşümlerini alarak aradaki mesafeyi hesaplar ve ölçek çubuğunu günceller.
   useEffect(() => {
     if (!viewer) return;
 
@@ -32,6 +34,12 @@ export default function DistanceLegend({ viewer }: DistanceLegendProps) {
       const left = scene.camera.getPickRay(new Cartesian2((width / 2) | 0, height - 1));
       const right = scene.camera.getPickRay(new Cartesian2(1 + (width / 2) | 0, height - 1));
 
+      if (!left || !right) {
+        setBarWidth(undefined);
+        setDistanceLabel(undefined);
+        return;
+      }
+
       const globe = scene.globe;
       const leftPosition = globe.pick(left, scene);
       const rightPosition = globe.pick(right, scene);
@@ -49,14 +57,14 @@ export default function DistanceLegend({ viewer }: DistanceLegendProps) {
       const pixelDistance = geodesic.surfaceDistance;
 
       const maxBarWidth = 100;
-      let distance;
-      for (let i = distances.length - 1; !defined(distance) && i >= 0; --i) {
+      let distance: number | undefined;
+      for (let i = distances.length - 1; distance === undefined && i >= 0; --i) {
         if (distances[i] / pixelDistance < maxBarWidth) {
           distance = distances[i];
         }
       }
 
-      if (defined(distance)) {
+      if (distance !== undefined) {
         let label = distance >= 1000 ? (distance / 1000).toString() + ' km' : distance.toString() + ' m';
         setBarWidth((distance / pixelDistance) | 0);
         setDistanceLabel(label);

@@ -3,6 +3,7 @@ import { Viewer } from 'cesium';
 import Compass from './Compass';
 import ZoomControls from './ZoomControls';
 import DistanceLegend from './DistanceLegend';
+// @ts-ignore
 import './Navigation.css';
 
 interface CesiumNavigationProps {

@@ -81,7 +81,9 @@ export default function Compass({ viewer }: CompassProps) {
     return { clientX: temp.clientX, clientY: temp.clientY };
   };
 
-  // Native DOM event binding - React synthetic events çakışıyor Cesium ile
+  // [KRİTİK] React'in kendi onMouseDown (Synthetic Event) sistemi, Cesium'un ScreenSpaceEventHandler'ı ile
+  // aynı anda tetiklendiği için mouse'u bıraksak bile Cesium kamerayı çevirmeye devam ediyordu.
+  // Çözüm: React'in olay dinleyicisi yerine doğrudan DOM elementine native (capture: true) event bağlamak.
   useEffect(() => {
     const el = compassRef.current;
     if (!el) return;
@@ -115,6 +117,7 @@ export default function Compass({ viewer }: CompassProps) {
     if (scene.mode === SceneMode.MORPHING) return;
 
     const compassElement = compassRef.current;
+    if (!compassElement) return;
     const compassRectangle = compassElement.getBoundingClientRect();
     const maxDistance = compassRectangle.width / 2.0;
     const center = new Cartesian2((compassRectangle.right - compassRectangle.left) / 2.0, (compassRectangle.bottom - compassRectangle.top) / 2.0);
@@ -185,6 +188,8 @@ export default function Compass({ viewer }: CompassProps) {
 
     if (scene.mode === SceneMode.MORPHING || !sscc.enableInputs) return;
 
+    // [KRİTİK] .NET WebView2'den gelen (nokta kaydır modu vb.) "enableTilt" veya "enableRotate"
+    // kısıtlamalarına saygı duymak için bu kontroller yapılıyor. Kısıtlama varsa pusula işlevsiz kalır.
     switch (scene.mode) {
       case SceneMode.COLUMBUS_VIEW:
         if (!sscc.enableLook && (!sscc.enableTranslate || !sscc.enableTilt)) return;
@@ -293,6 +298,7 @@ export default function Compass({ viewer }: CompassProps) {
     const camera = scene.camera;
     const sscc = scene.screenSpaceCameraController;
 
+    // [KRİTİK] İç gyro'da (orbit) olduğu gibi, dış halkada (rotate) da .NET WebView2 kısıtlamaları kontrol ediliyor.
     if (scene.mode === SceneMode.MORPHING || scene.mode === SceneMode.SCENE2D || !sscc.enableInputs) return;
     if (!sscc.enableLook && (scene.mode === SceneMode.COLUMBUS_VIEW || (scene.mode === SceneMode.SCENE3D && !sscc.enableRotate))) return;
 

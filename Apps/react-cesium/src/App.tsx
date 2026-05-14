@@ -23,7 +23,7 @@ export default function App() {
         timeline: false,
         navigationHelpButton: false,
         navigationInstructionsInitiallyVisible: false,
-        imageryProvider: false
+        baseLayer: false
       });
       
       // Ion token gerektirmeyen OpenStreetMap katmanı

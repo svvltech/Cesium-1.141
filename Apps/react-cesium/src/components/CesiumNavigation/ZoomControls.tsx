@@ -22,6 +22,8 @@ export default function ZoomControls({ viewer }: ZoomControlsProps) {
     return intersection;
   };
 
+  // [KRİTİK] Kameranın baktığı noktayı (focus) bulur ve o noktaya doğru yakınlaştırma (zoom In/Out)
+  // işlemini gerçekleştirir. Cesium ScreenSpaceCameraController'ın kısıtlamalarına uyar.
   const handleZoom = (amount: number) => {
     if (!viewer) return;
     const scene = viewer.scene;
@@ -37,9 +39,10 @@ export default function ZoomControls({ viewer }: ZoomControlsProps) {
 
     const focus = getCameraFocus(viewer);
     let orientation: any;
-    let focusPoint = focus;
+    let focusPoint: Cartesian3;
 
     if (focus) {
+      focusPoint = focus;
       orientation = {
         direction: camera.direction,
         up: camera.up
