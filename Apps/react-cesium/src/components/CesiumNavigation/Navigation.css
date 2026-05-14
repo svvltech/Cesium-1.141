@@ -1,0 +1,146 @@
+.compass {
+  pointer-events: auto;
+  position: absolute;
+  right: 0px;
+  top: 100px;
+  width: 95px;
+  height: 95px;
+  overflow: hidden;
+}
+
+.compass-outer-ring {
+  position: absolute;
+  top: 0;
+  width: 95px;
+  height: 95px;
+  fill: rgba(255, 255, 255, 0.5);
+  transform-origin: center;
+}
+
+.compass-outer-ring-background {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 44px;
+  border: 12px solid rgba(47, 53, 60, 0.8);
+  box-sizing: content-box;
+}
+
+.compass-gyro {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 95px;
+  height: 95px;
+  fill: #CCC;
+}
+
+.compass-gyro-active {
+  fill: #68ADFE;
+}
+
+.compass-gyro-background {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  width: 33px;
+  height: 33px;
+  border-radius: 33px;
+  background-color: rgba(47, 53, 60, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-sizing: content-box;
+}
+
+.compass-gyro-background:hover + .compass-gyro {
+  fill: #68ADFE;
+}
+
+.compass-rotation-marker {
+  position: absolute;
+  top: 0;
+  width: 95px;
+  height: 95px;
+  fill: #68ADFE;
+  transform-origin: center;
+}
+
+.navigation-controls {
+  position: absolute;
+  right: 30px;
+  top: 210px;
+  width: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 300;
+  user-select: none;
+}
+
+.navigation-control {
+  cursor: pointer;
+  border-bottom: 1px solid #555555;
+  background-color: rgba(47, 53, 60, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 30px;
+  color: white;
+}
+
+.navigation-control:active {
+  color: #FFF;
+}
+
+.navigation-control-last {
+  cursor: pointer;
+  background-color: rgba(47, 53, 60, 0.8);
+  border-bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 30px;
+  color: white;
+}
+
+.navigation-control-icon-svg {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  fill: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.distance-legend {
+  pointer-events: auto;
+  position: absolute;
+  border-radius: 15px;
+  padding-left: 5px;
+  padding-right: 5px;
+  bottom: 30px;
+  height: 30px;
+  width: 125px;
+  box-sizing: content-box;
+  background-color: rgba(47, 53, 60, 0.8);
+}
+
+.distance-legend-label {
+  display: inline-block;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: lighter;
+  line-height: 30px;
+  color: #FFFFFF;
+  width: 125px;
+  text-align: center;
+}
+
+.distance-legend-scale-bar {
+  border-left: 1px solid #FFFFFF;
+  border-right: 1px solid #FFFFFF;
+  border-bottom: 1px solid #FFFFFF;
+  position: absolute;
+  height: 10px;
+  top: 15px;
+}
