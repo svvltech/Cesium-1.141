@@ -129,20 +129,12 @@ export default function Compass({ viewer }: CompassProps) {
       handleMouseDown(e);
     };
 
-    const onDblClick = (e: any) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleDoubleClick();
-    };
-
     el.addEventListener('mousedown', onMouseDown, true);
     el.addEventListener('touchstart', onMouseDown, { capture: true, passive: false });
-    el.addEventListener('dblclick', onDblClick, true);
 
     return () => {
       el.removeEventListener('mousedown', onMouseDown, true);
       el.removeEventListener('touchstart', onMouseDown, true);
-      el.removeEventListener('dblclick', onDblClick, true);
     };
   }); // her render'da güncelle (heading, viewer değişebilir)
 
@@ -162,17 +154,17 @@ export default function Compass({ viewer }: CompassProps) {
 
     const distanceFraction = distanceFromCenter / maxDistance;
 
-    if (distanceFraction < GYRO_RADIUS_RATIO) {
-      orbit(compassElement, vector);
+    if ((e.target as Element)?.closest?.('.n-box-rect')) {
+      // N kutusu -> sadece rotate
+      rotate(compassElement, vector);
     } else if (distanceFraction < 1.0) {
-      rotate(compassElement, vector);
-    } else if ((e.target as Element)?.closest?.('.compass-asset-n-square')) {
-      // N kutusu dairenin dışına taşıyor (distanceFraction > 1.0), ama yine de rotate tetiklemeli
-      rotate(compassElement, vector);
+      // Dairenin geri kalanı (iç ve dış) -> orbit
+      // İç daire tıklandıysa (distanceFraction < GYRO_RADIUS_RATIO), tek tıklamayı algılaması için bilgi gönderiyoruz
+      orbit(compassElement, vector, distanceFraction < GYRO_RADIUS_RATIO);
     }
   };
 
-  const handleDoubleClick = () => {
+  const alignNorth = () => {
     const scene = viewer.scene;
     const camera = scene.camera;
     const sscc = scene.screenSpaceCameraController;
@@ -221,7 +213,7 @@ export default function Compass({ viewer }: CompassProps) {
     setOrbitCursorOpacity(easedOpacity);
   };
 
-  const orbit = (compassElement: HTMLElement, cursorVector: Cartesian2) => {
+  const orbit = (compassElement: HTMLElement, cursorVector: Cartesian2, isInnerCircle: boolean) => {
     const scene = viewer.scene;
     const sscc = scene.screenSpaceCameraController;
 
@@ -246,6 +238,8 @@ export default function Compass({ viewer }: CompassProps) {
     if (stateRef.current.orbitMouseUpFunction) {
       stateRef.current.orbitMouseUpFunction();
     }
+
+    let hasMoved = false;
 
     setIsOrbiting(true);
     stateRef.current.orbitLastTimestamp = getTimestamp();
@@ -297,6 +291,7 @@ export default function Compass({ viewer }: CompassProps) {
     };
 
     stateRef.current.orbitMouseMoveFunction = (e: any) => {
+      hasMoved = true;
       const { clientX, clientY } = getClientXY(e);
       const compassRectangle = compassElement.getBoundingClientRect();
       const c = new Cartesian2((compassRectangle.right - compassRectangle.left) / 2.0, (compassRectangle.bottom - compassRectangle.top) / 2.0);
@@ -310,6 +305,10 @@ export default function Compass({ viewer }: CompassProps) {
     const tickFn = stateRef.current.orbitTickFunction;
 
     const upFn = () => {
+      if (!hasMoved && isInnerCircle) {
+        alignNorth();
+      }
+
       setIsOrbiting(false);
       window.removeEventListener('mousemove', moveFn, true);
       window.removeEventListener('touchmove', moveFn, true);
@@ -450,8 +449,8 @@ export default function Compass({ viewer }: CompassProps) {
 
       {/* 1C. N Yazan Kare — Ayrı katmanda, orbit göstergesi (zIndex:10) üstünde kalır */}
       <div style={{ transform: `rotate(-${heading}rad)`, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11, pointerEvents: 'none' }}>
-        <svg className="compass-asset-n-square" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'auto' }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
-          <rect x={N_BOX_X} y={N_BOX_Y} width={N_BOX_SIZE} height={N_BOX_SIZE} rx={N_BOX_CORNER_RADIUS} fill="white" />
+        <svg className="compass-asset-n-square" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+          <rect className="n-box-rect" x={N_BOX_X} y={N_BOX_Y} width={N_BOX_SIZE} height={N_BOX_SIZE} rx={N_BOX_CORNER_RADIUS} fill="white" style={{ pointerEvents: 'auto' }} />
           <text x={CENTER} y={N_BOX_Y + N_BOX_SIZE - 9} fontFamily="Arial" fontSize="16" fontWeight="bold" fill="black" textAnchor="middle" style={{ userSelect: 'none', pointerEvents: 'none' }}>N</text>
         </svg>
       </div>
