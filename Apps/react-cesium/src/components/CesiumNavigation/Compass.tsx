@@ -38,14 +38,12 @@ const ARROW_DEPTH = 9;                     // Ok ucundan tabana mesafe
 // Küp
 const CUBE_SCALE = 0.8;                     // Küp ölçeği
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function Compass({ viewer }: CompassProps) {
   const compassRef = useRef<HTMLDivElement>(null);
-  const [heading, setHeading] = useState(0);
-  const [isOrbiting, setIsOrbiting] = useState(false);
-  const [orbitCursorAngle, setOrbitCursorAngle] = useState(0);
-  const [orbitCursorOpacity, setOrbitCursorOpacity] = useState(0);
+  const outerRingRef = useRef<HTMLDivElement>(null);
+  const nSquareLayerRef = useRef<HTMLDivElement>(null);
+  const orbitMarkerRef = useRef<HTMLDivElement>(null);
+  const gyroRef = useRef<HTMLDivElement>(null);
 
   // Mutable refs for tracking drag state across renders without causing re-renders
   const stateRef = useRef<{
@@ -101,7 +99,13 @@ export default function Compass({ viewer }: CompassProps) {
     if (!viewer) return;
 
     const postRender = () => {
-      setHeading(viewer.scene.camera.heading);
+      const currentHeading = viewer.scene.camera.heading;
+      if (outerRingRef.current) {
+        outerRingRef.current.style.transform = `rotate(-${currentHeading}rad)`;
+      }
+      if (nSquareLayerRef.current) {
+        nSquareLayerRef.current.style.transform = `rotate(-${currentHeading}rad)`;
+      }
     };
 
     const removePostRender = viewer.scene.postRender.addEventListener(postRender);
@@ -200,7 +204,6 @@ export default function Compass({ viewer }: CompassProps) {
     const angle = Math.atan2(-vector.y, vector.x);
     const oAngle = CesiumMath.zeroToTwoPi(angle - CesiumMath.PI_OVER_TWO);
     stateRef.current.orbitCursorAngle = oAngle;
-    setOrbitCursorAngle(oAngle);
 
     const distance = Cartesian2.magnitude(vector);
     const maxDistance = compassWidth / 2.0;
@@ -210,7 +213,11 @@ export default function Compass({ viewer }: CompassProps) {
     const distanceFraction = Math.min(distance / gyroRadius, 1.0);
     const easedOpacity = 0.5 * distanceFraction * distanceFraction + 0.5;
     stateRef.current.orbitCursorOpacity = easedOpacity;
-    setOrbitCursorOpacity(easedOpacity);
+
+    if (orbitMarkerRef.current) {
+      orbitMarkerRef.current.style.transform = `rotate(-${oAngle}rad)`;
+      orbitMarkerRef.current.style.opacity = easedOpacity.toString();
+    }
   };
 
   const orbit = (compassElement: HTMLElement, cursorVector: Cartesian2, isInnerCircle: boolean) => {
@@ -241,7 +248,10 @@ export default function Compass({ viewer }: CompassProps) {
 
     let hasMoved = false;
 
-    setIsOrbiting(true);
+    if (gyroRef.current) {
+      gyroRef.current.classList.add('compass-gyro-active');
+    }
+
     stateRef.current.orbitLastTimestamp = getTimestamp();
 
     const camera = scene.camera;
@@ -309,7 +319,14 @@ export default function Compass({ viewer }: CompassProps) {
         alignNorth();
       }
 
-      setIsOrbiting(false);
+      if (orbitMarkerRef.current) {
+        orbitMarkerRef.current.style.opacity = '0';
+      }
+
+      if (gyroRef.current) {
+        gyroRef.current.classList.remove('compass-gyro-active');
+      }
+
       window.removeEventListener('mousemove', moveFn, true);
       window.removeEventListener('touchmove', moveFn, true);
       window.removeEventListener('mouseup', upFn, true);
@@ -417,28 +434,26 @@ export default function Compass({ viewer }: CompassProps) {
   return (
     <div className="compass" title="" ref={compassRef}>
 
-      {isOrbiting && (
-        <div className="compass-rotation-marker" style={{ transform: `rotate(-${orbitCursorAngle}rad)`, opacity: orbitCursorOpacity, position: 'absolute', zIndex: 10 }}>
-          <svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
-            <defs>
-              {/* Bu maske, şeklin dış daire dışına taşmasını fiziksel olarak engeller */}
-              <clipPath id="outer-circle-clip">
-                <circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} />
-              </clipPath>
-            </defs>
+      <div ref={orbitMarkerRef} className="compass-rotation-marker" style={{ position: 'absolute', zIndex: 10, opacity: 0, pointerEvents: 'none' }}>
+        <svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+          <defs>
+            {/* Bu maske, şeklin dış daire dışına taşmasını fiziksel olarak engeller */}
+            <clipPath id="outer-circle-clip">
+              <circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} />
+            </clipPath>
+          </defs>
 
-            <g clipPath="url(#outer-circle-clip)">
-              {/* Kalınlığı artırmak için ORBIT_INDICATOR_STROKE_WIDTH sabitini düzenleyin */}
-              <g transform={`translate(${CENTER}, ${CENTER}) scale(${ORBIT_INDICATOR_SCALE}) translate(-${CENTER}, -${CENTER})`}>
-                <path d="M 72.46875,22.03125 C 59.505873,22.050338 46.521615,27.004287 36.6875,36.875 L 47.84375,47.96875 C 61.521556,34.240041 83.442603,34.227389 97.125,47.90625 l 11.125,-11.125 C 98.401629,26.935424 85.431627,22.012162 72.46875,22.03125 z" fill="#68ADFE" stroke="#68ADFE" strokeWidth={ORBIT_INDICATOR_STROKE_WIDTH} strokeLinejoin="round" />
-              </g>
+          <g clipPath="url(#outer-circle-clip)">
+            {/* Kalınlığı artırmak için ORBIT_INDICATOR_STROKE_WIDTH sabitini düzenleyin */}
+            <g transform={`translate(${CENTER}, ${CENTER}) scale(${ORBIT_INDICATOR_SCALE}) translate(-${CENTER}, -${CENTER})`}>
+              <path d="M 72.46875,22.03125 C 59.505873,22.050338 46.521615,27.004287 36.6875,36.875 L 47.84375,47.96875 C 61.521556,34.240041 83.442603,34.227389 97.125,47.90625 l 11.125,-11.125 C 98.401629,26.935424 85.431627,22.012162 72.46875,22.03125 z" fill="#68ADFE" stroke="#68ADFE" strokeWidth={ORBIT_INDICATOR_STROKE_WIDTH} strokeLinejoin="round" />
             </g>
-          </svg>
-        </div>
-      )}
+          </g>
+        </svg>
+      </div>
 
       {/* 1. DIŞ HALKA ARKA PLANI (DÖNEN) */}
-      <div className="compass-outer-ring" style={{ transform: `rotate(-${heading}rad)`, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
+      <div ref={outerRingRef} className="compass-outer-ring" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
 
         {/* 1A. Oklar Arkaplan Dairesi */}
         <svg className="compass-asset-bg-circle" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
@@ -448,7 +463,7 @@ export default function Compass({ viewer }: CompassProps) {
       </div>
 
       {/* 1C. N Yazan Kare — Ayrı katmanda, orbit göstergesi (zIndex:10) üstünde kalır */}
-      <div style={{ transform: `rotate(-${heading}rad)`, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11, pointerEvents: 'none' }}>
+      <div ref={nSquareLayerRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11, pointerEvents: 'none' }}>
         <svg className="compass-asset-n-square" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <rect className="n-box-rect" x={N_BOX_X} y={N_BOX_Y} width={N_BOX_SIZE} height={N_BOX_SIZE} rx={N_BOX_CORNER_RADIUS} fill="white" style={{ pointerEvents: 'auto' }} />
           <text x={CENTER} y={N_BOX_Y + N_BOX_SIZE - 9} fontFamily="Arial" fontSize="16" fontWeight="bold" fill="black" textAnchor="middle" style={{ userSelect: 'none', pointerEvents: 'none' }}>N</text>
@@ -470,7 +485,7 @@ export default function Compass({ viewer }: CompassProps) {
       </div>
 
       {/* 2. İÇ HALKA (ORBIT/GYRO) */}
-      <div className={`compass-gyro ${isOrbiting ? 'compass-gyro-active' : ''}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3 }}>
+      <div ref={gyroRef} className="compass-gyro" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3 }}>
 
         {/* 2A. Ortadaki Daire */}
         <svg className="compass-asset-inner-circle" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
