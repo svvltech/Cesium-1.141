@@ -80,6 +80,19 @@ export default function Compass({ viewer }: CompassProps) {
     rotateMouseUpFunction: undefined
   });
 
+  // [KRİTİK OPTİMİZASYON]: Bileşen unmount olduğunda (ekrandan kalktığında) 
+  // havada kalan window event'lerini ve Cesium onTick listener'larını temizle.
+  useEffect(() => {
+    return () => {
+      if (stateRef.current.orbitMouseUpFunction) {
+        stateRef.current.orbitMouseUpFunction();
+      }
+      if (stateRef.current.rotateMouseUpFunction) {
+        stateRef.current.rotateMouseUpFunction();
+      }
+    };
+  }, []);
+
   const getCameraFocus = (viewer: Viewer): Cartesian3 | undefined => {
     const scene = viewer.scene;
     const camera = scene.camera;
@@ -140,7 +153,7 @@ export default function Compass({ viewer }: CompassProps) {
       el.removeEventListener('mousedown', onMouseDown, true);
       el.removeEventListener('touchstart', onMouseDown, true);
     };
-  }); // her render'da güncelle (heading, viewer değişebilir)
+  }, [viewer]);
 
   const handleMouseDown = (e: any) => {
     const { clientX, clientY } = getClientXY(e);
