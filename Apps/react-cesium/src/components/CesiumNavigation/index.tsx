@@ -13,11 +13,11 @@ interface CesiumNavigationProps {
   enableDistanceLegend?: boolean;
 }
 
-export default function CesiumNavigation({ 
-  viewer, 
-  enableCompass = true, 
-  enableZoomControls = true, 
-  enableDistanceLegend = true 
+export default function CesiumNavigation({
+  viewer,
+  enableCompass = true,
+  enableZoomControls = false,
+  enableDistanceLegend = false
 }: CesiumNavigationProps) {
   return (
     <>
