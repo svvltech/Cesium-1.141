@@ -1,100 +1,102 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Cartesian2, Cartesian3, Transforms, Matrix4, SceneMode, BoundingSphere, HeadingPitchRange, Math as CesiumMath, getTimestamp, defined, Ray, Viewer } from 'cesium';
 
 interface CompassProps {
   viewer: Viewer;
 }
 
-// ─── PUSULA TASARIM SABİTLERİ ───────────────────────────────────────────────
-// Boyut değişiklikleri yapmak için sadece buradaki değerleri düzenleyin.
-// Türetilen değerler (merkez, oran vb.) otomatik hesaplanır.
+// === PUSULA TASARIM SABITLERI ===
+// Boyut degisiklikleri yapmak icin sadece buradaki degerleri duzenleyin.
+// Turetilen degerler (merkez, oran vb.) otomatik hesaplanir.
 
-const VIEWBOX_SIZE = 145;                   // SVG viewBox genişlik/yükseklik
-const CENTER = VIEWBOX_SIZE / 2;            // = 72.5 — SVG merkez noktası
+const VIEWBOX_SIZE = 145;                   // SVG viewBox genislik/yukseklik
+const CENTER = VIEWBOX_SIZE / 2;            // = 72.5 - SVG merkez noktasi
 
 // Daireler
-const OUTER_RADIUS = 70;                    // Dış (gri) daire yarıçapı
-const OUTER_BORDER_WIDTH = 3;               // Dış daire border kalınlığı
-const INNER_RADIUS = 32;                    // İç (beyaz) daire yarıçapı
+const OUTER_RADIUS = 70;                    // Dis (gri) daire yaricapi
+const OUTER_BORDER_WIDTH = 3;               // Dis daire border kalinligi
+const INNER_RADIUS = 32;                    // Ic (beyaz) daire yaricapi
 
-// Oranlar (tıklama sınırları & opaklık hesabı)
-const GYRO_RADIUS_RATIO = INNER_RADIUS / CENTER; // ≈ 0.441 — orbit/rotate geçiş eşiği
+// Oranlar (tiklama sinirlari & opaklik hesabi)
+const GYRO_RADIUS_RATIO = INNER_RADIUS / CENTER; // = 0.441 - orbit/rotate gecis esigi
 
-// Orbit göstergesi (mavi yay)
-const ORBIT_INDICATOR_SCALE = 1.386;        // Dış sınırı r=70'e oturtacak ölçek
-const ORBIT_INDICATOR_STROKE_WIDTH = 4;     // Yayın kalınlığı (sadece içe doğru kalınlaşır)
+// Orbit gostergesi (mavi yay)
+const ORBIT_INDICATOR_SCALE = 1.386;        // Dis siniri r=70'e oturtacak olcek
+const ORBIT_INDICATOR_STROKE_WIDTH = 4;     // Yayin kalinligi
 
 // N kutusu
-const N_BOX_SIZE = 30;                      // N kutucuğu genişlik/yükseklik
-const N_BOX_CORNER_RADIUS = 5;              // Köşe yuvarlaklığı
-const N_BOX_Y = -15;                        // Üst kenar Y pozisyonu
-const N_BOX_X = CENTER - N_BOX_SIZE / 2;    // = 57.5 — Sol kenar X pozisyonu
+const N_BOX_SIZE = 30;                      // N kutucugu genislik/yukseklik
+const N_BOX_CORNER_RADIUS = 5;              // Kose yuvarlakligi
+const N_BOX_Y = -15;                        // Ust kenar Y pozisyonu
+const N_BOX_X = CENTER - N_BOX_SIZE / 2;    // = 57.5 - Sol kenar X pozisyonu
 
 // Oklar
-const ARROW_INSET = 16;                     // Ok ucunun dış kenara mesafesi
-const ARROW_SPREAD = 9;                     // Ok tabanının genişliğinin yarısı
-const ARROW_DEPTH = 9;                     // Ok ucundan tabana mesafe
+const ARROW_INSET = 16;                     // Ok ucunun dis kenara mesafesi
+const ARROW_SPREAD = 9;                     // Ok tabaninin genisliginin yarisi
+const ARROW_DEPTH = 9;                      // Ok ucundan tabana mesafe
 
-// Küp
-const CUBE_SCALE = 0.8;                     // Küp ölçeği
+// Kup
+const CUBE_SCALE = 0.8;                     // Kup olcegi
 
 export default function Compass({ viewer }: CompassProps) {
-  const compassRef = useRef<HTMLDivElement>(null);
-  const outerRingRef = useRef<HTMLDivElement>(null);
-  const nSquareLayerRef = useRef<HTMLDivElement>(null);
-  const orbitMarkerRef = useRef<HTMLDivElement>(null);
-  const gyroRef = useRef<HTMLDivElement>(null);
+  // DOM Referanslari
+  const pusula_ref = useRef<HTMLDivElement>(null);
+  const dis_halka_ref = useRef<HTMLDivElement>(null);
+  const n_kutu_katmani_ref = useRef<HTMLDivElement>(null);
+  const orbit_isaretci_ref = useRef<HTMLDivElement>(null);
+  const gyro_ref = useRef<HTMLDivElement>(null);
 
-  // Mutable refs for tracking drag state across renders without causing re-renders
-  const stateRef = useRef<{
-    orbitLastTimestamp: number;
-    orbitFrame?: Matrix4;
-    orbitIsLook: boolean;
-    orbitCursorAngle: number;
-    orbitCursorOpacity: number;
-    orbitTickFunction?: () => void;
-    orbitMouseMoveFunction?: (e: any) => void;
-    orbitMouseUpFunction?: () => void;
-    isRotating: boolean;
-    rotateInitialCursorAngle: number;
-    rotateFrame?: Matrix4;
-    rotateIsLook: boolean;
-    rotateInitialCameraAngle: number;
-    rotateMouseMoveFunction?: (e: any) => void;
-    rotateMouseUpFunction?: () => void;
+  // Re-render tetiklemeden, surukleme durumunu takip etmek icin kullanilan mutable state referansi
+  const state_ref = useRef<{
+    orbit_son_zaman_damgasi: number;
+    orbit_cercevesi?: Matrix4;
+    orbit_bakis_modu_mu: boolean;
+    orbit_imlec_acisi: number;
+    orbit_imlec_opakligi: number;
+    orbit_tick_fonksiyonu?: () => void;
+    orbit_mouse_move_fonksiyonu?: (e: any) => void;
+    orbit_mouse_up_fonksiyonu?: () => void;
+    donuyor_mu: boolean;
+    donme_ilk_imlec_acisi: number;
+    donme_cercevesi?: Matrix4;
+    donme_bakis_modu_mu: boolean;
+    donme_ilk_kamera_acisi: number;
+    donme_mouse_move_fonksiyonu?: (e: any) => void;
+    donme_mouse_up_fonksiyonu?: () => void;
   }>({
-    orbitLastTimestamp: 0,
-    orbitFrame: undefined,
-    orbitIsLook: false,
-    orbitCursorAngle: 0,
-    orbitCursorOpacity: 0,
-    orbitTickFunction: undefined,
-    orbitMouseMoveFunction: undefined,
-    orbitMouseUpFunction: undefined,
-    isRotating: false,
-    rotateInitialCursorAngle: 0,
-    rotateFrame: undefined,
-    rotateIsLook: false,
-    rotateInitialCameraAngle: 0,
-    rotateMouseMoveFunction: undefined,
-    rotateMouseUpFunction: undefined
+    orbit_son_zaman_damgasi: 0,
+    orbit_cercevesi: undefined,
+    orbit_bakis_modu_mu: false,
+    orbit_imlec_acisi: 0,
+    orbit_imlec_opakligi: 0,
+    orbit_tick_fonksiyonu: undefined,
+    orbit_mouse_move_fonksiyonu: undefined,
+    orbit_mouse_up_fonksiyonu: undefined,
+    donuyor_mu: false,
+    donme_ilk_imlec_acisi: 0,
+    donme_cercevesi: undefined,
+    donme_bakis_modu_mu: false,
+    donme_ilk_kamera_acisi: 0,
+    donme_mouse_move_fonksiyonu: undefined,
+    donme_mouse_up_fonksiyonu: undefined
   });
 
-  // [KRİTİK OPTİMİZASYON]: Bileşen unmount olduğunda (ekrandan kalktığında) 
-  // havada kalan window event'lerini ve Cesium onTick listener'larını temizle.
+  // Bilesen unmount oldugunda (ekrandan kalktiginda) 
+  // havada kalan window event'lerini ve Cesium onTick listener'larini temizler.
   useEffect(() => {
     return () => {
-      if (stateRef.current.orbitMouseUpFunction) {
-        stateRef.current.orbitMouseUpFunction();
+      if (state_ref.current.orbit_mouse_up_fonksiyonu) {
+        state_ref.current.orbit_mouse_up_fonksiyonu();
       }
-      if (stateRef.current.rotateMouseUpFunction) {
-        stateRef.current.rotateMouseUpFunction();
+      if (state_ref.current.donme_mouse_up_fonksiyonu) {
+        state_ref.current.donme_mouse_up_fonksiyonu();
       }
     };
   }, []);
 
-  const getCameraFocus = (viewer: Viewer): Cartesian3 | undefined => {
-    const scene = viewer.scene;
+  // Kameranin odak noktasini bulur
+  const kamera_odagini_al = (guncel_viewer: Viewer): Cartesian3 | undefined => {
+    const scene = guncel_viewer.scene;
     const camera = scene.camera;
     if (scene.mode === SceneMode.MORPHING) return undefined;
 
@@ -108,80 +110,84 @@ export default function Compass({ viewer }: CompassProps) {
     return intersection;
   };
 
+  // React render dongusunu bypass ederek, her Cesium karesinde (frame)
+  // DOM elementlerinin donus acilarini gunceller (60fps pruzsuzluk saglar)
   useEffect(() => {
     if (!viewer) return;
 
-    const postRender = () => {
-      const currentHeading = viewer.scene.camera.heading;
-      if (outerRingRef.current) {
-        outerRingRef.current.style.transform = `rotate(-${currentHeading}rad)`;
+    const post_render = () => {
+      const current_heading = viewer.scene.camera.heading;
+      if (dis_halka_ref.current) {
+        dis_halka_ref.current.style.transform = `rotate(-${current_heading}rad)`;
       }
-      if (nSquareLayerRef.current) {
-        nSquareLayerRef.current.style.transform = `rotate(-${currentHeading}rad)`;
+      if (n_kutu_katmani_ref.current) {
+        n_kutu_katmani_ref.current.style.transform = `rotate(-${current_heading}rad)`;
       }
     };
 
-    const removePostRender = viewer.scene.postRender.addEventListener(postRender);
+    const remove_post_render = viewer.scene.postRender.addEventListener(post_render);
 
     return () => {
-      removePostRender();
+      remove_post_render();
     };
   }, [viewer]);
 
-  const getClientXY = (e: any) => {
-    let temp = e.touches ? e.touches[0] : e;
-    return { clientX: temp.clientX, clientY: temp.clientY };
+  const fare_koordinatlarini_al = (e: any) => {
+    let gecici = e.touches ? e.touches[0] : e;
+    return { x: gecici.clientX, y: gecici.clientY };
   };
 
-  // [KRİTİK] React'in kendi onMouseDown (Synthetic Event) sistemi, Cesium'un ScreenSpaceEventHandler'ı ile
-  // aynı anda tetiklendiği için mouse'u bıraksak bile Cesium kamerayı çevirmeye devam ediyordu.
-  // Çözüm: React'in olay dinleyicisi yerine doğrudan DOM elementine native (capture: true) event bağlamak.
+  // React'in kendi onMouseDown (Synthetic Event) sistemi, Cesium'un ScreenSpaceEventHandler'i ile
+  // cakisabilecegi icin dogrudan DOM elementine native (capture: true) event bagliyoruz.
   useEffect(() => {
-    const el = compassRef.current;
-    if (!el) return;
+    const eleman = pusula_ref.current;
+    if (!eleman) return;
 
-    const onMouseDown = (e: any) => {
+    const on_mouse_down = (e: any) => {
       e.preventDefault();
       e.stopPropagation();
-      handleMouseDown(e);
+      handle_mouse_down(e);
     };
 
-    el.addEventListener('mousedown', onMouseDown, true);
-    el.addEventListener('touchstart', onMouseDown, { capture: true, passive: false });
+    eleman.addEventListener('mousedown', on_mouse_down, true);
+    eleman.addEventListener('touchstart', on_mouse_down, { capture: true, passive: false });
 
     return () => {
-      el.removeEventListener('mousedown', onMouseDown, true);
-      el.removeEventListener('touchstart', onMouseDown, true);
+      eleman.removeEventListener('mousedown', on_mouse_down, true);
+      eleman.removeEventListener('touchstart', on_mouse_down, true);
     };
   }, [viewer]);
 
-  const handleMouseDown = (e: any) => {
-    const { clientX, clientY } = getClientXY(e);
+  // Ana tiklama mantigi: Kullanicinin N kutusuna mi yoksa orbit bolgesine mi tikladigini ayirt eder
+  const handle_mouse_down = (e: any) => {
+    const { x, y } = fare_koordinatlarini_al(e);
     const scene = viewer.scene;
     if (scene.mode === SceneMode.MORPHING) return;
 
-    const compassElement = compassRef.current;
-    if (!compassElement) return;
-    const compassRectangle = compassElement.getBoundingClientRect();
-    const maxDistance = compassRectangle.width / 2.0;
-    const center = new Cartesian2((compassRectangle.right - compassRectangle.left) / 2.0, (compassRectangle.bottom - compassRectangle.top) / 2.0);
-    const clickLocation = new Cartesian2(clientX - compassRectangle.left, clientY - compassRectangle.top);
-    const vector = Cartesian2.subtract(clickLocation, center, new Cartesian2());
-    const distanceFromCenter = Cartesian2.magnitude(vector);
+    const pusula_elemani = pusula_ref.current;
+    if (!pusula_elemani) return;
 
-    const distanceFraction = distanceFromCenter / maxDistance;
+    const pusula_dortgeni = pusula_elemani.getBoundingClientRect();
+    const maksimum_mesafe = pusula_dortgeni.width / 2.0;
+    const merkez = new Cartesian2((pusula_dortgeni.right - pusula_dortgeni.left) / 2.0, (pusula_dortgeni.bottom - pusula_dortgeni.top) / 2.0);
+    const tiklama_konumu = new Cartesian2(x - pusula_dortgeni.left, y - pusula_dortgeni.top);
+    const vektor = Cartesian2.subtract(tiklama_konumu, merkez, new Cartesian2());
+    const merkeze_uzaklik = Cartesian2.magnitude(vektor);
+
+    const mesafe_orani = merkeze_uzaklik / maksimum_mesafe;
 
     if ((e.target as Element)?.closest?.('.n-box-rect')) {
-      // N kutusu -> sadece rotate
-      rotate(compassElement, vector);
-    } else if (distanceFraction < 1.0) {
-      // Dairenin geri kalanı (iç ve dış) -> orbit
-      // İç daire tıklandıysa (distanceFraction < GYRO_RADIUS_RATIO), tek tıklamayı algılaması için bilgi gönderiyoruz
-      orbit(compassElement, vector, distanceFraction < GYRO_RADIUS_RATIO);
+      // Sadece N kutusu donme (rotate/yaw) islevine sahiptir
+      donme_baslat(pusula_elemani, vektor);
+    } else if (mesafe_orani < 1.0) {
+      // Dairenin geri kalani (ic ve dis) orbit islevine sahiptir
+      const ic_daire_mi = mesafe_orani < GYRO_RADIUS_RATIO;
+      orbit_baslat(pusula_elemani, vektor, ic_daire_mi);
     }
   };
 
-  const alignNorth = () => {
+  // Kamerayi kuzeye ve asagiya dogru (standart harita gorunumu) hizalar
+  const kuzeye_hizala = () => {
     const scene = viewer.scene;
     const camera = scene.camera;
     const sscc = scene.screenSpaceCameraController;
@@ -194,53 +200,55 @@ export default function Compass({ viewer }: CompassProps) {
       if (scene.mode === SceneMode.SCENE3D && !sscc.enableRotate) return;
     }
 
-    const center = getCameraFocus(viewer);
-    if (!center) {
+    const odak = kamera_odagini_al(viewer);
+    if (!odak) {
       camera.flyHome(1);
       return;
     }
 
-    const cameraPosition = scene.globe.ellipsoid.cartographicToCartesian(camera.positionCartographic, new Cartesian3());
-    const surfaceNormal = scene.globe.ellipsoid.geodeticSurfaceNormal(center);
-    const focusBoundingSphere = new BoundingSphere(center, 0);
+    const kamera_pozisyonu = scene.globe.ellipsoid.cartographicToCartesian(camera.positionCartographic, new Cartesian3());
+    const yuzey_normali = scene.globe.ellipsoid.geodeticSurfaceNormal(odak);
+    const focus_bounding_sphere = new BoundingSphere(odak, 0);
 
-    camera.flyToBoundingSphere(focusBoundingSphere, {
+    camera.flyToBoundingSphere(focus_bounding_sphere, {
       offset: new HeadingPitchRange(0,
-        CesiumMath.PI_OVER_TWO - Cartesian3.angleBetween(surfaceNormal, camera.directionWC),
-        Cartesian3.distance(cameraPosition, center)
+        CesiumMath.PI_OVER_TWO - Cartesian3.angleBetween(yuzey_normali, camera.directionWC),
+        Cartesian3.distance(kamera_pozisyonu, odak)
       ),
       duration: 1.5
     });
   };
 
-  const updateAngleAndOpacity = (vector: Cartesian2, compassWidth: number) => {
-    const angle = Math.atan2(-vector.y, vector.x);
-    const oAngle = CesiumMath.zeroToTwoPi(angle - CesiumMath.PI_OVER_TWO);
-    stateRef.current.orbitCursorAngle = oAngle;
+  // Orbit sirasinda mavi yayin acisini ve hiz belirten opakligini hesaplar
+  const aci_ve_opaklik_guncelle = (vektor: Cartesian2, pusula_genisligi: number) => {
+    const aci = Math.atan2(-vektor.y, vektor.x);
+    const o_aci = CesiumMath.zeroToTwoPi(aci - CesiumMath.PI_OVER_TWO);
+    state_ref.current.orbit_imlec_acisi = o_aci;
 
-    const distance = Cartesian2.magnitude(vector);
-    const maxDistance = compassWidth / 2.0;
+    const mesafe = Cartesian2.magnitude(vektor);
+    const maksimum_mesafe = pusula_genisligi / 2.0;
 
-    // Orbit opaklığının ve dönme hızının iç daire sınırında maksimum (1.0) olmasını sağlıyoruz
-    const gyroRadius = maxDistance * GYRO_RADIUS_RATIO;
-    const distanceFraction = Math.min(distance / gyroRadius, 1.0);
-    const easedOpacity = 0.5 * distanceFraction * distanceFraction + 0.5;
-    stateRef.current.orbitCursorOpacity = easedOpacity;
+    // Orbit opakliginin ve donme hizinin ic daire sinirinda maksimum (1.0) olmasini sagliyoruz
+    const gyro_yaricapi = maksimum_mesafe * GYRO_RADIUS_RATIO;
+    const mesafe_orani = Math.min(mesafe / gyro_yaricapi, 1.0);
+    const yumusatilmis_opaklik = 0.5 * mesafe_orani * mesafe_orani + 0.5;
+    state_ref.current.orbit_imlec_opakligi = yumusatilmis_opaklik;
 
-    if (orbitMarkerRef.current) {
-      orbitMarkerRef.current.style.transform = `rotate(-${oAngle}rad)`;
-      orbitMarkerRef.current.style.opacity = easedOpacity.toString();
+    if (orbit_isaretci_ref.current) {
+      orbit_isaretci_ref.current.style.transform = `rotate(-${o_aci}rad)`;
+      orbit_isaretci_ref.current.style.opacity = yumusatilmis_opaklik.toString();
     }
   };
 
-  const orbit = (compassElement: HTMLElement, cursorVector: Cartesian2, isInnerCircle: boolean) => {
+  // Kamera egme ve cevresel donus (orbit) fonksiyonu
+  const orbit_baslat = (pusula_elemani: HTMLElement, baslangic_vektoru: Cartesian2, ic_daire_mi: boolean) => {
     const scene = viewer.scene;
     const sscc = scene.screenSpaceCameraController;
 
     if (scene.mode === SceneMode.MORPHING || !sscc.enableInputs) return;
 
-    // [KRİTİK] .NET WebView2'den gelen (nokta kaydır modu vb.) "enableTilt" veya "enableRotate"
-    // kısıtlamalarına saygı duymak için bu kontroller yapılıyor. Kısıtlama varsa pusula işlevsiz kalır.
+    // .NET WebView2'den veya baska bir eklentiden gelebilecek
+    // kamera kisitlamalarina (orn: egme kapali) saygi duyulur
     switch (scene.mode) {
       case SceneMode.COLUMBUS_VIEW:
         if (!sscc.enableLook && (!sscc.enableTranslate || !sscc.enableTilt)) return;
@@ -254,50 +262,50 @@ export default function Compass({ viewer }: CompassProps) {
       default: break;
     }
 
-    // Clean up any previous orbit listeners
-    if (stateRef.current.orbitMouseUpFunction) {
-      stateRef.current.orbitMouseUpFunction();
+    // Aktif bir orbit islemi varsa temizle
+    if (state_ref.current.orbit_mouse_up_fonksiyonu) {
+      state_ref.current.orbit_mouse_up_fonksiyonu();
     }
 
-    let hasMoved = false;
+    let hareket_etti_mi = false;
 
-    if (gyroRef.current) {
-      gyroRef.current.classList.add('compass-gyro-active');
+    if (gyro_ref.current) {
+      gyro_ref.current.classList.add('compass-gyro-active');
     }
 
-    stateRef.current.orbitLastTimestamp = getTimestamp();
+    state_ref.current.orbit_son_zaman_damgasi = getTimestamp();
 
     const camera = scene.camera;
-    const center = getCameraFocus(viewer);
+    const odak = kamera_odagini_al(viewer);
 
-    if (!defined(center)) {
-      stateRef.current.orbitFrame = Transforms.eastNorthUpToFixedFrame(camera.positionWC, scene.globe.ellipsoid, new Matrix4());
-      stateRef.current.orbitIsLook = true;
+    if (!defined(odak)) {
+      state_ref.current.orbit_cercevesi = Transforms.eastNorthUpToFixedFrame(camera.positionWC, scene.globe.ellipsoid, new Matrix4());
+      state_ref.current.orbit_bakis_modu_mu = true;
     } else {
-      stateRef.current.orbitFrame = Transforms.eastNorthUpToFixedFrame(center, scene.globe.ellipsoid, new Matrix4());
-      stateRef.current.orbitIsLook = false;
+      state_ref.current.orbit_cercevesi = Transforms.eastNorthUpToFixedFrame(odak, scene.globe.ellipsoid, new Matrix4());
+      state_ref.current.orbit_bakis_modu_mu = false;
     }
 
-    stateRef.current.orbitTickFunction = () => {
-      const timestamp = getTimestamp();
-      const deltaT = timestamp - stateRef.current.orbitLastTimestamp;
-      const rate = (stateRef.current.orbitCursorOpacity - 0.5) * 2.5 / 1000;
-      const distance = deltaT * rate;
+    state_ref.current.orbit_tick_fonksiyonu = () => {
+      const zaman_damgasi = getTimestamp();
+      const zaman_farki = zaman_damgasi - state_ref.current.orbit_son_zaman_damgasi;
+      const hiz_orani = (state_ref.current.orbit_imlec_opakligi - 0.5) * 2.5 / 1000;
+      const hiz_mesafesi = zaman_farki * hiz_orani;
 
-      const angle = stateRef.current.orbitCursorAngle + CesiumMath.PI_OVER_TWO;
-      const x = Math.cos(angle) * distance;
-      const y = Math.sin(angle) * distance;
+      const aci = state_ref.current.orbit_imlec_acisi + CesiumMath.PI_OVER_TWO;
+      const x = Math.cos(aci) * hiz_mesafesi;
+      const y = Math.sin(aci) * hiz_mesafesi;
 
-      let oldTransform: any;
-      if (defined(stateRef.current.orbitFrame)) {
-        oldTransform = Matrix4.clone(camera.transform, new Matrix4());
-        camera.lookAtTransform(stateRef.current.orbitFrame);
+      let eski_transform: any;
+      if (defined(state_ref.current.orbit_cercevesi)) {
+        eski_transform = Matrix4.clone(camera.transform, new Matrix4());
+        camera.lookAtTransform(state_ref.current.orbit_cercevesi);
       }
 
       if (scene.mode === SceneMode.SCENE2D) {
-        camera.move(new Cartesian3(x, y, 0), Math.max(scene.canvas.clientWidth, scene.canvas.clientHeight) / 100 * camera.positionCartographic.height * distance);
+        camera.move(new Cartesian3(x, y, 0), Math.max(scene.canvas.clientWidth, scene.canvas.clientHeight) / 100 * camera.positionCartographic.height * hiz_mesafesi);
       } else {
-        if (stateRef.current.orbitIsLook) {
+        if (state_ref.current.orbit_bakis_modu_mu) {
           camera.look(Cartesian3.UNIT_Z, -x);
           camera.look(camera.right, -y);
         } else {
@@ -306,158 +314,158 @@ export default function Compass({ viewer }: CompassProps) {
         }
       }
 
-      if (defined(stateRef.current.orbitFrame)) {
-        camera.lookAtTransform(oldTransform);
+      if (defined(state_ref.current.orbit_cercevesi)) {
+        camera.lookAtTransform(eski_transform);
       }
 
-      stateRef.current.orbitLastTimestamp = timestamp;
+      state_ref.current.orbit_son_zaman_damgasi = zaman_damgasi;
     };
 
-    stateRef.current.orbitMouseMoveFunction = (e: any) => {
-      hasMoved = true;
-      const { clientX, clientY } = getClientXY(e);
-      const compassRectangle = compassElement.getBoundingClientRect();
-      const c = new Cartesian2((compassRectangle.right - compassRectangle.left) / 2.0, (compassRectangle.bottom - compassRectangle.top) / 2.0);
-      const clickLocation = new Cartesian2(clientX - compassRectangle.left, clientY - compassRectangle.top);
-      const vector = Cartesian2.subtract(clickLocation, c, new Cartesian2());
-      updateAngleAndOpacity(vector, compassRectangle.width);
+    state_ref.current.orbit_mouse_move_fonksiyonu = (e: any) => {
+      hareket_etti_mi = true;
+      const { x, y } = fare_koordinatlarini_al(e);
+      const pusula_dortgeni = pusula_elemani.getBoundingClientRect();
+      const merkez = new Cartesian2((pusula_dortgeni.right - pusula_dortgeni.left) / 2.0, (pusula_dortgeni.bottom - pusula_dortgeni.top) / 2.0);
+      const tiklama_konumu = new Cartesian2(x - pusula_dortgeni.left, y - pusula_dortgeni.top);
+      const vektor = Cartesian2.subtract(tiklama_konumu, merkez, new Cartesian2());
+      aci_ve_opaklik_guncelle(vektor, pusula_dortgeni.width);
     };
 
-    // Capture references BEFORE adding listeners
-    const moveFn = stateRef.current.orbitMouseMoveFunction;
-    const tickFn = stateRef.current.orbitTickFunction;
+    const hareket_fonksiyonu = state_ref.current.orbit_mouse_move_fonksiyonu;
+    const tick_fonksiyonu = state_ref.current.orbit_tick_fonksiyonu;
 
-    const upFn = () => {
-      if (!hasMoved && isInnerCircle) {
-        alignNorth();
+    const birakma_fonksiyonu = () => {
+      // Eger sadece tiklanip birakildiysa (hic hareket yoksa) kamerayi kuzeye hizala
+      if (!hareket_etti_mi && ic_daire_mi) {
+        kuzeye_hizala();
       }
 
-      if (orbitMarkerRef.current) {
-        orbitMarkerRef.current.style.opacity = '0';
+      if (orbit_isaretci_ref.current) {
+        orbit_isaretci_ref.current.style.opacity = '0';
       }
 
-      if (gyroRef.current) {
-        gyroRef.current.classList.remove('compass-gyro-active');
+      if (gyro_ref.current) {
+        gyro_ref.current.classList.remove('compass-gyro-active');
       }
 
-      window.removeEventListener('mousemove', moveFn, true);
-      window.removeEventListener('touchmove', moveFn, true);
-      window.removeEventListener('mouseup', upFn, true);
-      window.removeEventListener('touchend', upFn, true);
-      if (tickFn) {
-        viewer.clock.onTick.removeEventListener(tickFn);
+      window.removeEventListener('mousemove', hareket_fonksiyonu, true);
+      window.removeEventListener('touchmove', hareket_fonksiyonu, true);
+      window.removeEventListener('mouseup', birakma_fonksiyonu, true);
+      window.removeEventListener('touchend', birakma_fonksiyonu, true);
+      if (tick_fonksiyonu) {
+        viewer.clock.onTick.removeEventListener(tick_fonksiyonu);
       }
-      stateRef.current.orbitMouseMoveFunction = undefined;
-      stateRef.current.orbitMouseUpFunction = undefined;
-      stateRef.current.orbitTickFunction = undefined;
+      state_ref.current.orbit_mouse_move_fonksiyonu = undefined;
+      state_ref.current.orbit_mouse_up_fonksiyonu = undefined;
+      state_ref.current.orbit_tick_fonksiyonu = undefined;
     };
-    stateRef.current.orbitMouseUpFunction = upFn;
+    state_ref.current.orbit_mouse_up_fonksiyonu = birakma_fonksiyonu;
 
-    window.addEventListener('mousemove', moveFn, true);
-    window.addEventListener('touchmove', moveFn, { capture: true, passive: false });
-    window.addEventListener('mouseup', upFn, true);
-    window.addEventListener('touchend', upFn, true);
-    viewer.clock.onTick.addEventListener(stateRef.current.orbitTickFunction);
-    updateAngleAndOpacity(cursorVector, compassElement.getBoundingClientRect().width);
+    window.addEventListener('mousemove', hareket_fonksiyonu, true);
+    window.addEventListener('touchmove', hareket_fonksiyonu, { capture: true, passive: false });
+    window.addEventListener('mouseup', birakma_fonksiyonu, true);
+    window.addEventListener('touchend', birakma_fonksiyonu, true);
+    viewer.clock.onTick.addEventListener(state_ref.current.orbit_tick_fonksiyonu);
+    aci_ve_opaklik_guncelle(baslangic_vektoru, pusula_elemani.getBoundingClientRect().width);
   };
 
-  const rotate = (compassElement: HTMLElement, cursorVector: Cartesian2) => {
+  // Kamera dikey eksende (heading) cevirme fonksiyonu
+  const donme_baslat = (pusula_elemani: HTMLElement, baslangic_vektoru: Cartesian2) => {
     const scene = viewer.scene;
     const camera = scene.camera;
     const sscc = scene.screenSpaceCameraController;
 
-    // [KRİTİK] İç gyro'da (orbit) olduğu gibi, dış halkada (rotate) da .NET WebView2 kısıtlamaları kontrol ediliyor.
+    // Iceride (orbit) oldugu gibi, dis halkada (rotate) da WebView2 kisitlamalari kontrol ediliyor.
     if (scene.mode === SceneMode.MORPHING || scene.mode === SceneMode.SCENE2D || !sscc.enableInputs) return;
     if (!sscc.enableLook && (scene.mode === SceneMode.COLUMBUS_VIEW || (scene.mode === SceneMode.SCENE3D && !sscc.enableRotate))) return;
 
-    // Clean up any previous rotate listeners
-    if (stateRef.current.rotateMouseUpFunction) {
-      stateRef.current.rotateMouseUpFunction();
+    if (state_ref.current.donme_mouse_up_fonksiyonu) {
+      state_ref.current.donme_mouse_up_fonksiyonu();
     }
 
-    stateRef.current.isRotating = true;
-    stateRef.current.rotateInitialCursorAngle = Math.atan2(-cursorVector.y, cursorVector.x);
+    state_ref.current.donuyor_mu = true;
+    state_ref.current.donme_ilk_imlec_acisi = Math.atan2(-baslangic_vektoru.y, baslangic_vektoru.x);
 
-    const viewCenter = getCameraFocus(viewer);
+    const odak = kamera_odagini_al(viewer);
 
-    if (!defined(viewCenter) || (scene.mode === SceneMode.COLUMBUS_VIEW && !sscc.enableLook && !sscc.enableTranslate)) {
-      stateRef.current.rotateFrame = Transforms.eastNorthUpToFixedFrame(camera.positionWC, scene.globe.ellipsoid, new Matrix4());
-      stateRef.current.rotateIsLook = true;
+    if (!defined(odak) || (scene.mode === SceneMode.COLUMBUS_VIEW && !sscc.enableLook && !sscc.enableTranslate)) {
+      state_ref.current.donme_cercevesi = Transforms.eastNorthUpToFixedFrame(camera.positionWC, scene.globe.ellipsoid, new Matrix4());
+      state_ref.current.donme_bakis_modu_mu = true;
     } else {
-      stateRef.current.rotateFrame = Transforms.eastNorthUpToFixedFrame(viewCenter, scene.globe.ellipsoid, new Matrix4());
-      stateRef.current.rotateIsLook = false;
+      state_ref.current.donme_cercevesi = Transforms.eastNorthUpToFixedFrame(odak, scene.globe.ellipsoid, new Matrix4());
+      state_ref.current.donme_bakis_modu_mu = false;
     }
 
-    let oldTransform: any;
-    if (defined(stateRef.current.rotateFrame)) {
-      oldTransform = Matrix4.clone(camera.transform, new Matrix4());
-      camera.lookAtTransform(stateRef.current.rotateFrame);
+    let eski_transform: any;
+    if (defined(state_ref.current.donme_cercevesi)) {
+      eski_transform = Matrix4.clone(camera.transform, new Matrix4());
+      camera.lookAtTransform(state_ref.current.donme_cercevesi);
     }
 
-    stateRef.current.rotateInitialCameraAngle = -camera.heading;
+    state_ref.current.donme_ilk_kamera_acisi = -camera.heading;
 
-    if (defined(stateRef.current.rotateFrame)) {
-      camera.lookAtTransform(oldTransform);
+    if (defined(state_ref.current.donme_cercevesi)) {
+      camera.lookAtTransform(eski_transform);
     }
 
-    const rotateMoveFn = (e: any) => {
-      const { clientX, clientY } = getClientXY(e);
-      const compassRectangle = compassElement.getBoundingClientRect();
-      const center = new Cartesian2((compassRectangle.right - compassRectangle.left) / 2.0, (compassRectangle.bottom - compassRectangle.top) / 2.0);
-      const clickLocation = new Cartesian2(clientX - compassRectangle.left, clientY - compassRectangle.top);
-      const vector = Cartesian2.subtract(clickLocation, center, new Cartesian2());
-      const angle = Math.atan2(-vector.y, vector.x);
+    const hareket_fonksiyonu = (e: any) => {
+      const { x, y } = fare_koordinatlarini_al(e);
+      const pusula_dortgeni = pusula_elemani.getBoundingClientRect();
+      const merkez = new Cartesian2((pusula_dortgeni.right - pusula_dortgeni.left) / 2.0, (pusula_dortgeni.bottom - pusula_dortgeni.top) / 2.0);
+      const tiklama_konumu = new Cartesian2(x - pusula_dortgeni.left, y - pusula_dortgeni.top);
+      const vektor = Cartesian2.subtract(tiklama_konumu, merkez, new Cartesian2());
+      const aci = Math.atan2(-vektor.y, vektor.x);
 
-      const angleDifference = angle - stateRef.current.rotateInitialCursorAngle;
-      const newCameraAngle = CesiumMath.zeroToTwoPi(stateRef.current.rotateInitialCameraAngle - angleDifference);
+      const aci_farki = aci - state_ref.current.donme_ilk_imlec_acisi;
+      const yeni_kamera_acisi = CesiumMath.zeroToTwoPi(state_ref.current.donme_ilk_kamera_acisi - aci_farki);
 
-      let oldT: any;
-      if (defined(stateRef.current.rotateFrame)) {
-        oldT = Matrix4.clone(camera.transform, new Matrix4());
-        camera.lookAtTransform(stateRef.current.rotateFrame);
+      let gecici_transform: any;
+      if (defined(state_ref.current.donme_cercevesi)) {
+        gecici_transform = Matrix4.clone(camera.transform, new Matrix4());
+        camera.lookAtTransform(state_ref.current.donme_cercevesi);
       }
 
-      const currentCameraAngle = -camera.heading;
-      camera.rotateRight(newCameraAngle - currentCameraAngle);
+      const current_heading = -camera.heading;
+      camera.rotateRight(yeni_kamera_acisi - current_heading);
 
-      if (defined(stateRef.current.rotateFrame)) {
-        camera.lookAtTransform(oldT);
+      if (defined(state_ref.current.donme_cercevesi)) {
+        camera.lookAtTransform(gecici_transform);
       }
     };
 
-    const rotateUpFn = () => {
-      stateRef.current.isRotating = false;
-      window.removeEventListener('mousemove', rotateMoveFn, true);
-      window.removeEventListener('touchmove', rotateMoveFn, true);
-      window.removeEventListener('mouseup', rotateUpFn, true);
-      window.removeEventListener('touchend', rotateUpFn, true);
-      stateRef.current.rotateMouseMoveFunction = undefined;
-      stateRef.current.rotateMouseUpFunction = undefined;
+    const birakma_fonksiyonu = () => {
+      state_ref.current.donuyor_mu = false;
+      window.removeEventListener('mousemove', hareket_fonksiyonu, true);
+      window.removeEventListener('touchmove', hareket_fonksiyonu, true);
+      window.removeEventListener('mouseup', birakma_fonksiyonu, true);
+      window.removeEventListener('touchend', birakma_fonksiyonu, true);
+      state_ref.current.donme_mouse_move_fonksiyonu = undefined;
+      state_ref.current.donme_mouse_up_fonksiyonu = undefined;
     };
 
-    stateRef.current.rotateMouseMoveFunction = rotateMoveFn;
-    stateRef.current.rotateMouseUpFunction = rotateUpFn;
+    state_ref.current.donme_mouse_move_fonksiyonu = hareket_fonksiyonu;
+    state_ref.current.donme_mouse_up_fonksiyonu = birakma_fonksiyonu;
 
-    window.addEventListener('mousemove', rotateMoveFn, true);
-    window.addEventListener('touchmove', rotateMoveFn, { capture: true, passive: false });
-    window.addEventListener('mouseup', rotateUpFn, true);
-    window.addEventListener('touchend', rotateUpFn, true);
+    window.addEventListener('mousemove', hareket_fonksiyonu, true);
+    window.addEventListener('touchmove', hareket_fonksiyonu, { capture: true, passive: false });
+    window.addEventListener('mouseup', birakma_fonksiyonu, true);
+    window.addEventListener('touchend', birakma_fonksiyonu, true);
   };
 
   return (
-    <div className="compass" title="" ref={compassRef}>
+    <div className="compass" title="" ref={pusula_ref}>
 
-      <div ref={orbitMarkerRef} className="compass-rotation-marker" style={{ position: 'absolute', zIndex: 10, opacity: 0, pointerEvents: 'none' }}>
+      <div ref={orbit_isaretci_ref} className="compass-rotation-marker" style={{ position: 'absolute', zIndex: 10, opacity: 0, pointerEvents: 'none' }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <defs>
-            {/* Bu maske, şeklin dış daire dışına taşmasını fiziksel olarak engeller */}
+            {/* Bu maske, seklin dis daire disina tasmasini fiziksel olarak engeller */}
             <clipPath id="outer-circle-clip">
               <circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} />
             </clipPath>
           </defs>
 
           <g clipPath="url(#outer-circle-clip)">
-            {/* Kalınlığı artırmak için ORBIT_INDICATOR_STROKE_WIDTH sabitini düzenleyin */}
+            {/* Kalinligi artirmak icin ORBIT_INDICATOR_STROKE_WIDTH sabitini duzenleyin */}
             <g transform={`translate(${CENTER}, ${CENTER}) scale(${ORBIT_INDICATOR_SCALE}) translate(-${CENTER}, -${CENTER})`}>
               <path d="M 72.46875,22.03125 C 59.505873,22.050338 46.521615,27.004287 36.6875,36.875 L 47.84375,47.96875 C 61.521556,34.240041 83.442603,34.227389 97.125,47.90625 l 11.125,-11.125 C 98.401629,26.935424 85.431627,22.012162 72.46875,22.03125 z" fill="#68ADFE" stroke="#68ADFE" strokeWidth={ORBIT_INDICATOR_STROKE_WIDTH} strokeLinejoin="round" />
             </g>
@@ -465,30 +473,27 @@ export default function Compass({ viewer }: CompassProps) {
         </svg>
       </div>
 
-      {/* 1. DIŞ HALKA ARKA PLANI (DÖNEN) */}
-      <div ref={outerRingRef} className="compass-outer-ring" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
-
-        {/* 1A. Oklar Arkaplan Dairesi */}
+      {/* 1. DIS HALKA ARKA PLANI (DONEN) */}
+      <div ref={dis_halka_ref} className="compass-outer-ring" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
         <svg className="compass-asset-bg-circle" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} fill="#B3B3B3" stroke="#333333" strokeWidth={OUTER_BORDER_WIDTH} />
         </svg>
-
       </div>
 
-      {/* 1C. N Yazan Kare — Ayrı katmanda, orbit göstergesi (zIndex:10) üstünde kalır */}
-      <div ref={nSquareLayerRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11, pointerEvents: 'none' }}>
+      {/* 1C. N Yazan Kare - Ayri katmanda, orbit gostergesi (zIndex:10) ustunde kalir */}
+      <div ref={n_kutu_katmani_ref} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11, pointerEvents: 'none' }}>
         <svg className="compass-asset-n-square" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <rect className="n-box-rect" x={N_BOX_X} y={N_BOX_Y} width={N_BOX_SIZE} height={N_BOX_SIZE} rx={N_BOX_CORNER_RADIUS} fill="white" style={{ pointerEvents: 'auto' }} />
           <text x={CENTER} y={N_BOX_Y + N_BOX_SIZE - 9} fontFamily="Arial" fontSize="16" fontWeight="bold" fill="black" textAnchor="middle" style={{ userSelect: 'none', pointerEvents: 'none' }}>N</text>
         </svg>
       </div>
 
-      {/* 1B. Oklar (SABİT) */}
+      {/* 1B. Oklar (SABIT) */}
       <div className="compass-fixed-arrows" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2, pointerEvents: 'none' }}>
         <svg className="compass-asset-arrows" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
-          {/* Üst */}
+          {/* Ust */}
           <polygon points={`${CENTER},${ARROW_INSET} ${CENTER + ARROW_SPREAD},${ARROW_INSET + ARROW_DEPTH} ${CENTER - ARROW_SPREAD},${ARROW_INSET + ARROW_DEPTH}`} fill="white" />
-          {/* Sağ */}
+          {/* Sag */}
           <polygon points={`${VIEWBOX_SIZE - ARROW_INSET},${CENTER} ${VIEWBOX_SIZE - ARROW_INSET - ARROW_DEPTH},${CENTER - ARROW_SPREAD} ${VIEWBOX_SIZE - ARROW_INSET - ARROW_DEPTH},${CENTER + ARROW_SPREAD}`} fill="white" />
           {/* Alt */}
           <polygon points={`${CENTER},${VIEWBOX_SIZE - ARROW_INSET} ${CENTER - ARROW_SPREAD},${VIEWBOX_SIZE - ARROW_INSET - ARROW_DEPTH} ${CENTER + ARROW_SPREAD},${VIEWBOX_SIZE - ARROW_INSET - ARROW_DEPTH}`} fill="white" />
@@ -497,15 +502,15 @@ export default function Compass({ viewer }: CompassProps) {
         </svg>
       </div>
 
-      {/* 2. İÇ HALKA (ORBIT/GYRO) */}
-      <div ref={gyroRef} className="compass-gyro" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3 }}>
+      {/* 2. IC HALKA (ORBIT/GYRO) */}
+      <div ref={gyro_ref} className="compass-gyro" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3 }}>
 
         {/* 2A. Ortadaki Daire */}
         <svg className="compass-asset-inner-circle" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <circle cx={CENTER} cy={CENTER} r={INNER_RADIUS} fill="white" />
         </svg>
 
-        {/* 2B. Ortadaki Küp */}
+        {/* 2B. Ortadaki Kup */}
         <svg className="compass-asset-cube" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <g transform={`translate(${CENTER}, ${CENTER}) scale(${CUBE_SCALE}) translate(-${CENTER}, -${CENTER})`}>
             <polygon points="72.5,55 90,65 72.5,75 55,65" fill="#5F73E8" />
