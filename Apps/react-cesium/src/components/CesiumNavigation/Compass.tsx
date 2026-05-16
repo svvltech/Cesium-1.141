@@ -176,7 +176,7 @@ export default function Compass({ viewer }: CompassProps) {
 
     const mesafe_orani = merkeze_uzaklik / maksimum_mesafe;
 
-    if ((e.target as Element)?.closest?.('.n-box-rect')) {
+    if ((e.target as Element)?.closest?.('.n_kutusu_dikdortgeni')) {
       // Sadece N kutusu donme (rotate/yaw) islevine sahiptir
       donme_baslat(pusula_elemani, vektor);
     } else if (mesafe_orani < 1.0) {
@@ -270,7 +270,7 @@ export default function Compass({ viewer }: CompassProps) {
     let hareket_etti_mi = false;
 
     if (gyro_ref.current) {
-      gyro_ref.current.classList.add('compass-gyro-active');
+      gyro_ref.current.classList.add('pusula_gyro_aktif');
     }
 
     state_ref.current.orbit_son_zaman_damgasi = getTimestamp();
@@ -345,7 +345,7 @@ export default function Compass({ viewer }: CompassProps) {
       }
 
       if (gyro_ref.current) {
-        gyro_ref.current.classList.remove('compass-gyro-active');
+        gyro_ref.current.classList.remove('pusula_gyro_aktif');
       }
 
       window.removeEventListener('mousemove', hareket_fonksiyonu, true);
@@ -453,9 +453,9 @@ export default function Compass({ viewer }: CompassProps) {
   };
 
   return (
-    <div className="compass" title="" ref={pusula_ref}>
+    <div className="pusula" title="" ref={pusula_ref}>
 
-      <div ref={orbit_isaretci_ref} className="compass-rotation-marker" style={{ position: 'absolute', zIndex: 10, opacity: 0, pointerEvents: 'none' }}>
+      <div ref={orbit_isaretci_ref} className="pusula_donus_isaretcisi" style={{ position: 'absolute', zIndex: 10, opacity: 0, pointerEvents: 'none' }}>
         <svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <defs>
             {/* Bu maske, seklin dis daire disina tasmasini fiziksel olarak engeller */}
@@ -474,23 +474,23 @@ export default function Compass({ viewer }: CompassProps) {
       </div>
 
       {/* 1. DIS HALKA ARKA PLANI (DONEN) */}
-      <div ref={dis_halka_ref} className="compass-outer-ring" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
-        <svg className="compass-asset-bg-circle" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+      <div ref={dis_halka_ref} className="pusula_dis_halka" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1 }}>
+        <svg className="pusula_bilesen_arka_plan_daire" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} fill="#B3B3B3" stroke="#333333" strokeWidth={OUTER_BORDER_WIDTH} />
         </svg>
       </div>
 
       {/* 1C. N Yazan Kare - Ayri katmanda, orbit gostergesi (zIndex:10) ustunde kalir */}
       <div ref={n_kutu_katmani_ref} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 11, pointerEvents: 'none' }}>
-        <svg className="compass-asset-n-square" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
-          <rect className="n-box-rect" x={N_BOX_X} y={N_BOX_Y} width={N_BOX_SIZE} height={N_BOX_SIZE} rx={N_BOX_CORNER_RADIUS} fill="white" style={{ pointerEvents: 'auto' }} />
+        <svg className="pusula_bilesen_n_kare" style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+          <rect className="n_kutusu_dikdortgeni" x={N_BOX_X} y={N_BOX_Y} width={N_BOX_SIZE} height={N_BOX_SIZE} rx={N_BOX_CORNER_RADIUS} fill="white" style={{ pointerEvents: 'auto' }} />
           <text x={CENTER} y={N_BOX_Y + N_BOX_SIZE - 9} fontFamily="Arial" fontSize="16" fontWeight="bold" fill="black" textAnchor="middle" style={{ userSelect: 'none', pointerEvents: 'none' }}>N</text>
         </svg>
       </div>
 
       {/* 1B. Oklar (SABIT) */}
-      <div className="compass-fixed-arrows" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2, pointerEvents: 'none' }}>
-        <svg className="compass-asset-arrows" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+      <div className="pusula_sabit_oklar" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2, pointerEvents: 'none' }}>
+        <svg className="pusula_bilesen_oklar" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           {/* Ust */}
           <polygon points={`${CENTER},${ARROW_INSET} ${CENTER + ARROW_SPREAD},${ARROW_INSET + ARROW_DEPTH} ${CENTER - ARROW_SPREAD},${ARROW_INSET + ARROW_DEPTH}`} fill="white" />
           {/* Sag */}
@@ -503,15 +503,15 @@ export default function Compass({ viewer }: CompassProps) {
       </div>
 
       {/* 2. IC HALKA (ORBIT/GYRO) */}
-      <div ref={gyro_ref} className="compass-gyro" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3 }}>
+      <div ref={gyro_ref} className="pusula_gyro" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 3 }}>
 
         {/* 2A. Ortadaki Daire */}
-        <svg className="compass-asset-inner-circle" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+        <svg className="pusula_bilesen_ic_daire" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <circle cx={CENTER} cy={CENTER} r={INNER_RADIUS} fill="white" />
         </svg>
 
         {/* 2B. Ortadaki Kup */}
-        <svg className="compass-asset-cube" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
+        <svg className="pusula_bilesen_kup" style={{ position: 'absolute', top: 0, left: 0 }} width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}>
           <g transform={`translate(${CENTER}, ${CENTER}) scale(${CUBE_SCALE}) translate(-${CENTER}, -${CENTER})`}>
             <polygon points="72.5,55 90,65 72.5,75 55,65" fill="#5F73E8" />
             <polygon points="55,65 72.5,75 72.5,95 55,85" fill="#3A4BB5" />

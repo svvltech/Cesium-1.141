@@ -1,4 +1,4 @@
-.compass {
+.pusula {
   pointer-events: auto;
   position: absolute;
   right: 25px;
@@ -8,7 +8,7 @@
   overflow: visible;
 }
 
-.compass-outer-ring {
+.pusula_dis_halka {
   position: absolute;
   top: 0;
   width: 95px;
@@ -17,7 +17,7 @@
   transform-origin: center;
 }
 
-.compass-outer-ring-background {
+.pusula_dis_halka_arka_plan {
   position: absolute;
   top: 14px;
   left: 14px;
@@ -28,7 +28,7 @@
   box-sizing: content-box;
 }
 
-.compass-gyro {
+.pusula_gyro {
   pointer-events: none;
   position: absolute;
   top: 0;
@@ -37,11 +37,11 @@
   fill: #CCC;
 }
 
-.compass-gyro-active {
+.pusula_gyro_aktif {
   fill: #68ADFE;
 }
 
-.compass-gyro-background {
+.pusula_gyro_arka_plan {
   position: absolute;
   top: 30px;
   left: 30px;
@@ -53,11 +53,11 @@
   box-sizing: content-box;
 }
 
-.compass-gyro-background:hover + .compass-gyro {
+.pusula_gyro_arka_plan:hover + .pusula_gyro {
   fill: #68ADFE;
 }
 
-.compass-rotation-marker {
+.pusula_donus_isaretcisi {
   position: absolute;
   top: 0;
   width: 95px;
@@ -66,7 +66,7 @@
   transform-origin: center;
 }
 
-.navigation-controls {
+.navigasyon_kontrolleri {
   position: absolute;
   right: 30px;
   top: 210px;
@@ -76,7 +76,7 @@
   user-select: none;
 }
 
-.navigation-control {
+.navigasyon_kontrol {
   cursor: pointer;
   border-bottom: 1px solid #555555;
   background-color: rgba(47, 53, 60, 0.8);
@@ -87,11 +87,11 @@
   color: white;
 }
 
-.navigation-control:active {
+.navigasyon_kontrol:active {
   color: #FFF;
 }
 
-.navigation-control-last {
+.navigasyon_kontrol_son {
   cursor: pointer;
   background-color: rgba(47, 53, 60, 0.8);
   border-bottom: 0;
@@ -102,7 +102,7 @@
   color: white;
 }
 
-.navigation-control-icon-svg {
+.navigasyon_kontrol_ikon_svg {
   position: relative;
   width: 15px;
   height: 15px;
@@ -112,7 +112,7 @@
   align-items: center;
 }
 
-.distance-legend {
+.mesafe_legend {
   pointer-events: auto;
   position: absolute;
   border-radius: 15px;
@@ -125,7 +125,7 @@
   background-color: rgba(47, 53, 60, 0.8);
 }
 
-.distance-legend-label {
+.mesafe_legend_label {
   display: inline-block;
   font-family: 'Roboto', sans-serif;
   font-size: 14px;
@@ -136,7 +136,7 @@
   text-align: center;
 }
 
-.distance-legend-scale-bar {
+.mesafe_legend_scale_bar {
   border-left: 1px solid #FFFFFF;
   border-right: 1px solid #FFFFFF;
   border-bottom: 1px solid #FFFFFF;
