@@ -1,29 +1,29 @@
 import React from 'react';
 import { Viewer } from 'cesium';
-import Compass from './Compass';
+import Pusula from './Pusula';
 import ZoomControls from './ZoomControls';
 import DistanceLegend from './DistanceLegend';
 // @ts-ignore
-import './Navigation.css';
+import './Navigasyon.css';
 
-interface CesiumNavigationProps {
+interface CesiumNavigasyonProps {
   viewer: Viewer;
-  enableCompass?: boolean;
-  enableZoomControls?: boolean;
-  enableDistanceLegend?: boolean;
+  pusula_aktif?: boolean;
+  zoom_kontrolleri_aktif?: boolean;
+  mesafe_legend_aktif?: boolean;
 }
 
-export default function CesiumNavigation({
+export default function CesiumNavigasyon({
   viewer,
-  enableCompass = true,
-  enableZoomControls = false,
-  enableDistanceLegend = false
-}: CesiumNavigationProps) {
+  pusula_aktif = true,
+  zoom_kontrolleri_aktif = false,
+  mesafe_legend_aktif = false
+}: CesiumNavigasyonProps) {
   return (
     <>
-      {enableCompass && <Compass viewer={viewer} />}
-      {enableZoomControls && <ZoomControls viewer={viewer} />}
-      {enableDistanceLegend && <DistanceLegend viewer={viewer} />}
+      {pusula_aktif && <Pusula viewer={viewer} />}
+      {zoom_kontrolleri_aktif && <ZoomControls viewer={viewer} />}
+      {mesafe_legend_aktif && <DistanceLegend viewer={viewer} />}
     </>
   );
 }

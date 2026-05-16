@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Cartesian2, Cartesian3, Transforms, Matrix4, SceneMode, BoundingSphere, HeadingPitchRange, Math as CesiumMath, getTimestamp, defined, Ray, Viewer } from 'cesium';
 
-interface CompassProps {
+interface PusulaProps {
   viewer: Viewer;
 }
 
@@ -38,7 +38,7 @@ const ARROW_DEPTH = 9;                      // Ok ucundan tabana mesafe
 // Kup
 const CUBE_SCALE = 0.8;                     // Kup olcegi
 
-export default function Compass({ viewer }: CompassProps) {
+export default function Pusula({ viewer }: PusulaProps) {
   // DOM Referanslari
   const pusula_ref = useRef<HTMLDivElement>(null);
   const dis_halka_ref = useRef<HTMLDivElement>(null);
@@ -202,7 +202,7 @@ export default function Compass({ viewer }: CompassProps) {
 
     const odak = kamera_odagini_al(viewer);
     if (!odak) {
-      camera.flyHome(1);
+      camera.flyHome(0);
       return;
     }
 
@@ -215,7 +215,7 @@ export default function Compass({ viewer }: CompassProps) {
         CesiumMath.PI_OVER_TWO - Cartesian3.angleBetween(yuzey_normali, camera.directionWC),
         Cartesian3.distance(kamera_pozisyonu, odak)
       ),
-      duration: 1.5
+      duration: 0
     });
   };
 
