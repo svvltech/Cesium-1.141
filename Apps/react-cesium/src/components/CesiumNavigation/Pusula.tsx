@@ -183,7 +183,7 @@ export default function Pusula({ viewer }: PusulaProps) {
         CesiumMath.PI_OVER_TWO - Cartesian3.angleBetween(yuzey_normali, camera.directionWC),
         Cartesian3.distance(kamera_pozisyonu, center)
       ),
-      duration: 1.5
+      duration: 0
     });
   };
 
