@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Viewer, OpenStreetMapImageryProvider } from 'cesium';
-import CesiumNavigation from './components/CesiumNavigation';
+import CesiumNavigasyon from './components/CesiumNavigation';
 
 export default function App() {
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -55,7 +55,7 @@ export default function App() {
   return (
     <>
       <div id="cesiumContainer" ref={viewerRef} />
-      {viewer && <CesiumNavigation viewer={viewer} />}
+      {viewer && <CesiumNavigasyon viewer={viewer} />}
     </>
   );
 }

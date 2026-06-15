@@ -86,9 +86,9 @@ export default function DistanceLegend({ viewer }: DistanceLegendProps) {
   }
 
   return (
-    <div className="distance-legend">
-      <div className="distance-legend-label">{distanceLabel}</div>
-      <div className="distance-legend-scale-bar" style={{ width: barWidth + 'px', left: (5 + (125 - barWidth) / 2) + 'px' }}></div>
+    <div className="mesafe_legend">
+      <div className="mesafe_legend_label">{distanceLabel}</div>
+      <div className="mesafe_legend_scale_bar" style={{ width: barWidth + 'px', left: (5 + (125 - barWidth) / 2) + 'px' }}></div>
     </div>
   );
 }
